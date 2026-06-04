@@ -8,40 +8,24 @@ function createId() {
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
-function createDemoLoan(overrides = {}) {
+function createEmptyLoan(overrides = {}) {
   return {
     id: createId(),
-    loanName: "住房贷款",
-    principal: 1000000,
-    annualRate: 3.85,
+    loanName: "新贷款",
+    principal: 0,
+    annualRate: 0,
     termMonths: 360,
-    startMonth: "2026-06",
+    startMonth: new Date().toISOString().slice(0, 7),
     paymentDay: 12,
     repaymentType: "equalPayment",
-    events: [
-      { id: createId(), date: "2027-06-10", type: "rate", value: 3.45, note: "利率下调" },
-      {
-        id: createId(),
-        date: "2028-06-20",
-        type: "prepay",
-        value: 80000,
-        mode: "reducePayment",
-        note: "提前还款",
-      },
-    ],
+    events: [],
     ...overrides,
   };
 }
 
 function createBlankLoan(index) {
-  return createDemoLoan({
+  return createEmptyLoan({
     loanName: `新贷款 ${index}`,
-    principal: 500000,
-    annualRate: 3.5,
-    termMonths: 240,
-    startMonth: new Date().toISOString().slice(0, 7),
-    paymentDay: 12,
-    events: [],
   });
 }
 
@@ -76,9 +60,12 @@ const els = {
   scheduleBody: document.querySelector("#scheduleBody"),
   tableFilter: document.querySelector("#tableFilter"),
   installApp: document.querySelector("#installApp"),
+  exportBackup: document.querySelector("#exportBackup"),
+  importBackup: document.querySelector("#importBackup"),
+  backupFile: document.querySelector("#backupFile"),
   exportCsv: document.querySelector("#exportCsv"),
   saveLocal: document.querySelector("#saveLocal"),
-  resetDemo: document.querySelector("#resetDemo"),
+  clearData: document.querySelector("#clearData"),
 };
 
 let state = loadState();
@@ -124,17 +111,8 @@ function loadState() {
     localStorage.removeItem(storageKey);
   }
 
-  const first = createDemoLoan();
-  const second = createDemoLoan({
-    loanName: "经营周转贷",
-    principal: 300000,
-    annualRate: 4.2,
-    termMonths: 60,
-    startMonth: "2026-06",
-    paymentDay: 12,
-    events: [{ id: createId(), date: "2026-12-15", type: "prepay", value: 30000, mode: "shortenTerm", note: "回款后提前还" }],
-  });
-  return { loans: [first, second], activeLoanId: first.id };
+  const loan = createEmptyLoan();
+  return { loans: [loan], activeLoanId: loan.id };
 }
 
 function activeLoan() {
@@ -549,6 +527,70 @@ function saveStateOnly() {
   localStorage.setItem(storageKey, JSON.stringify(state));
 }
 
+function exportBackup() {
+  readForm();
+  const payload = {
+    app: "loan-tracker",
+    version: 2,
+    exportedAt: new Date().toISOString(),
+    data: state,
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], {
+    type: "application/json;charset=utf-8",
+  });
+  const link = document.createElement("a");
+  const date = new Date().toISOString().slice(0, 10);
+  link.href = URL.createObjectURL(blob);
+  link.download = `还贷记录备份-${date}.json`;
+  link.click();
+  URL.revokeObjectURL(link.href);
+}
+
+function normalizeImportedState(raw) {
+  const imported = raw && raw.data ? raw.data : raw;
+  if (!imported || !Array.isArray(imported.loans) || imported.loans.length === 0) {
+    throw new Error("备份文件格式不正确");
+  }
+  const loans = imported.loans.map((loan, index) => normalizeLoan(loan, `贷款 ${index + 1}`));
+  return {
+    loans,
+    activeLoanId: loans.some((loan) => loan.id === imported.activeLoanId)
+      ? imported.activeLoanId
+      : loans[0].id,
+  };
+}
+
+function importBackupFile(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.addEventListener("load", () => {
+    try {
+      state = normalizeImportedState(JSON.parse(reader.result));
+      saveStateOnly();
+      updateEventTypeUI();
+      render({ syncForm: true });
+      els.saveLocal.textContent = "已恢复";
+      window.setTimeout(() => {
+        els.saveLocal.textContent = "保存";
+      }, 1000);
+    } catch (error) {
+      alert(error.message || "备份文件无法读取");
+    } finally {
+      els.backupFile.value = "";
+    }
+  });
+  reader.readAsText(file);
+}
+
+function clearLocalData() {
+  if (!confirm("确定清空这台设备上的所有贷款记录吗？清空前建议先备份。")) return;
+  localStorage.removeItem(storageKey);
+  localStorage.removeItem(legacyStorageKey);
+  state = loadState();
+  updateEventTypeUI();
+  render({ syncForm: true });
+}
+
 function updateEventTypeUI() {
   const isPrepay = els.eventType.value === "prepay";
   els.eventValueLabel.textContent = isPrepay ? "提前还款金额" : "新年利率 %";
@@ -608,6 +650,9 @@ els.eventType.addEventListener("change", updateEventTypeUI);
 els.addEvent.addEventListener("click", addEvent);
 els.saveLocal.addEventListener("click", save);
 els.exportCsv.addEventListener("click", exportCsv);
+els.exportBackup.addEventListener("click", exportBackup);
+els.importBackup.addEventListener("click", () => els.backupFile.click());
+els.backupFile.addEventListener("change", () => importBackupFile(els.backupFile.files[0]));
 els.installApp.addEventListener("click", async () => {
   if (!deferredInstallPrompt) return;
   deferredInstallPrompt.prompt();
@@ -616,13 +661,7 @@ els.installApp.addEventListener("click", async () => {
   els.installApp.classList.add("hidden");
 });
 els.tableFilter.addEventListener("change", () => renderSchedule(latestSchedule));
-els.resetDemo.addEventListener("click", () => {
-  localStorage.removeItem(storageKey);
-  localStorage.removeItem(legacyStorageKey);
-  state = loadState();
-  updateEventTypeUI();
-  render({ syncForm: true });
-});
+els.clearData.addEventListener("click", clearLocalData);
 
 els.eventList.addEventListener("click", (event) => {
   const id = event.target.dataset.remove;
