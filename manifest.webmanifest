@@ -1,0 +1,18 @@
+{
+  "name": "还贷记录工具",
+  "short_name": "还贷记录",
+  "description": "记录多笔贷款、利率变化、提前还款和每期还款明细。",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f6f7f4",
+  "theme_color": "#0f766e",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

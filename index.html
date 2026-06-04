@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#0f766e" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="还贷记录" />
+    <title>还贷记录工具</title>
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="icon" href="./icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="./icon.svg" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="app">
+      <section class="sidebar" aria-label="贷款设置">
+        <div class="brand">
+          <div>
+            <h1>还贷记录</h1>
+            <p>多笔贷款、每次变化、每期明细，一页看清。</p>
+          </div>
+          <button id="resetDemo" class="icon-button" title="恢复示例数据" aria-label="恢复示例数据">↺</button>
+        </div>
+
+        <section class="panel loan-book">
+          <div class="panel-title row-title">
+            <span>贷款列表</span>
+            <button id="addLoan" class="small-button" type="button">新增</button>
+          </div>
+          <div id="loanList" class="loan-list"></div>
+        </section>
+
+        <form id="loanForm" class="panel">
+          <div class="panel-title row-title">
+            <span>基础信息</span>
+            <button id="deleteLoan" class="small-button danger" type="button">删除</button>
+          </div>
+          <label>
+            <span>贷款名称</span>
+            <input id="loanName" type="text" value="住房贷款" />
+          </label>
+          <div class="grid-two">
+            <label>
+              <span>初始本金</span>
+              <input id="principal" type="number" min="0" step="1000" value="1000000" />
+            </label>
+            <label>
+              <span>年利率 %</span>
+              <input id="annualRate" type="number" min="0" step="0.01" value="3.85" />
+            </label>
+          </div>
+          <div class="grid-two">
+            <label>
+              <span>总期数</span>
+              <input id="termMonths" type="number" min="1" step="1" value="360" />
+            </label>
+            <label>
+              <span>起始月份</span>
+              <input id="startMonth" type="month" value="2026-06" />
+            </label>
+          </div>
+          <div class="grid-two">
+            <label>
+              <span>每月还款日</span>
+              <input id="paymentDay" type="number" min="1" max="28" step="1" value="12" />
+            </label>
+            <label>
+              <span>还款方式</span>
+              <select id="repaymentType">
+                <option value="equalPayment">等额本息</option>
+                <option value="equalPrincipal">等额本金</option>
+              </select>
+            </label>
+          </div>
+        </form>
+
+        <section class="panel">
+          <div class="panel-title">新增变化</div>
+          <div class="grid-two">
+            <label>
+              <span>发生日期</span>
+              <input id="eventDate" type="date" />
+            </label>
+            <label>
+              <span>变化类型</span>
+              <select id="eventType">
+                <option value="rate">利率调整</option>
+                <option value="prepay">提前还款</option>
+              </select>
+            </label>
+          </div>
+          <div class="grid-two">
+            <label>
+              <span id="eventValueLabel">新年利率 %</span>
+              <input id="eventValue" type="number" min="0" step="0.01" value="3.45" />
+            </label>
+            <label id="prepayModeWrap" class="hidden">
+              <span>处理方式</span>
+              <select id="prepayMode">
+                <option value="reducePayment">降低月供</option>
+                <option value="shortenTerm">缩短期限</option>
+              </select>
+            </label>
+          </div>
+          <label>
+            <span>备注</span>
+            <input id="eventNote" type="text" placeholder="例如 LPR 下调 / 年终奖提前还款" />
+          </label>
+          <button id="addEvent" class="primary" type="button">添加变化</button>
+        </section>
+
+        <section class="panel">
+          <div class="panel-title">变化记录</div>
+          <div id="eventList" class="event-list"></div>
+        </section>
+      </section>
+
+      <section class="workspace">
+        <div class="topbar">
+          <div>
+            <h2 id="summaryTitle">住房贷款</h2>
+            <p id="summarySub">按当前设置自动计算</p>
+          </div>
+          <div class="actions">
+            <button id="installApp" class="hidden" type="button">安装</button>
+            <button id="exportCsv" type="button">导出 CSV</button>
+            <button id="saveLocal" type="button">保存</button>
+          </div>
+        </div>
+
+        <section class="metrics" aria-label="汇总指标">
+          <article>
+            <span>当前月供</span>
+            <strong id="currentPayment">-</strong>
+          </article>
+          <article>
+            <span>剩余本金</span>
+            <strong id="remainingPrincipal">-</strong>
+          </article>
+          <article>
+            <span>总利息</span>
+            <strong id="totalInterest">-</strong>
+          </article>
+          <article>
+            <span>预计结清</span>
+            <strong id="payoffDate">-</strong>
+          </article>
+        </section>
+
+        <section class="timeline-wrap">
+          <div class="section-head">
+            <h3>变化时间线</h3>
+            <span id="timelineHint"></span>
+          </div>
+          <div id="timeline" class="timeline"></div>
+        </section>
+
+        <section class="table-wrap">
+          <div class="section-head">
+            <h3>每期明细</h3>
+            <label class="inline-filter">
+              <span>显示</span>
+              <select id="tableFilter">
+                <option value="all">全部期数</option>
+                <option value="changed">仅变化期及后一期</option>
+                <option value="remaining">未结清期数</option>
+              </select>
+            </label>
+          </div>
+          <div class="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>期数</th>
+                  <th>月份</th>
+                  <th>年利率</th>
+                  <th>月供</th>
+                  <th>月供变化</th>
+                  <th>本金</th>
+                  <th>利息</th>
+                  <th>提前还款</th>
+                  <th>剩余本金</th>
+                  <th>变化</th>
+                </tr>
+              </thead>
+              <tbody id="scheduleBody"></tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <script src="./app.js"></script>
+    <script>
+      if ("serviceWorker" in navigator) {
+        window.addEventListener("load", () => {
+          navigator.serviceWorker.register("./service-worker.js");
+        });
+      }
+    </script>
+  </body>
+</html>
