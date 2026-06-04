@@ -23,60 +23,62 @@
           <button id="clearData" class="icon-button" title="清空本机数据" aria-label="清空本机数据">⌫</button>
         </div>
 
-        <section class="panel loan-book">
-          <div class="panel-title row-title">
+        <details class="panel collapsible loan-book" open>
+          <summary class="panel-title row-title">
             <span>贷款列表</span>
             <button id="addLoan" class="small-button" type="button">新增</button>
-          </div>
+          </summary>
           <div id="loanList" class="loan-list"></div>
-        </section>
+        </details>
 
-        <form id="loanForm" class="panel">
-          <div class="panel-title row-title">
+        <details class="panel collapsible" open>
+          <summary class="panel-title row-title">
             <span>基础信息</span>
             <button id="deleteLoan" class="small-button danger" type="button">删除</button>
-          </div>
-          <label>
-            <span>贷款名称</span>
-            <input id="loanName" type="text" value="新贷款" />
-          </label>
-          <div class="grid-two">
+          </summary>
+          <form id="loanForm">
             <label>
-              <span>初始本金</span>
-              <input id="principal" type="number" min="0" step="1000" value="0" />
+              <span>贷款名称</span>
+              <input id="loanName" type="text" value="新贷款" />
             </label>
-            <label>
-              <span>年利率 %</span>
-              <input id="annualRate" type="number" min="0" step="0.01" value="0" />
-            </label>
-          </div>
-          <div class="grid-two">
-            <label>
-              <span>总期数</span>
-              <input id="termMonths" type="number" min="1" step="1" value="360" />
-            </label>
-            <label>
-              <span>起始月份</span>
-              <input id="startMonth" type="month" />
-            </label>
-          </div>
-          <div class="grid-two">
-            <label>
-              <span>每月还款日</span>
-              <input id="paymentDay" type="number" min="1" max="28" step="1" value="12" />
-            </label>
-            <label>
-              <span>还款方式</span>
-              <select id="repaymentType">
-                <option value="equalPayment">等额本息</option>
-                <option value="equalPrincipal">等额本金</option>
-              </select>
-            </label>
-          </div>
-        </form>
+            <div class="grid-two">
+              <label>
+                <span>初始本金</span>
+                <input id="principal" type="number" min="0" step="1000" value="0" />
+              </label>
+              <label>
+                <span>年利率 %</span>
+                <input id="annualRate" type="number" min="0" step="0.01" value="0" />
+              </label>
+            </div>
+            <div class="grid-two">
+              <label>
+                <span>总期数</span>
+                <input id="termMonths" type="number" min="1" step="1" value="360" />
+              </label>
+              <label>
+                <span>起始月份</span>
+                <input id="startMonth" type="month" />
+              </label>
+            </div>
+            <div class="grid-two">
+              <label>
+                <span>每月还款日</span>
+                <input id="paymentDay" type="number" min="1" max="28" step="1" value="12" />
+              </label>
+              <label>
+                <span>还款方式</span>
+                <select id="repaymentType">
+                  <option value="equalPayment">等额本息</option>
+                  <option value="equalPrincipal">等额本金</option>
+                </select>
+              </label>
+            </div>
+          </form>
+        </details>
 
-        <section class="panel">
-          <div class="panel-title">新增变化</div>
+        <details class="panel collapsible" open>
+          <summary class="panel-title">新增变化</summary>
           <div class="grid-two">
             <label>
               <span>发生日期</span>
@@ -108,12 +110,12 @@
             <input id="eventNote" type="text" placeholder="例如 LPR 下调 / 年终奖提前还款" />
           </label>
           <button id="addEvent" class="primary" type="button">添加变化</button>
-        </section>
+        </details>
 
-        <section class="panel">
-          <div class="panel-title">变化记录</div>
+        <details class="panel collapsible" open>
+          <summary class="panel-title">变化记录</summary>
           <div id="eventList" class="event-list"></div>
-        </section>
+        </details>
       </section>
 
       <section class="workspace">
@@ -184,6 +186,7 @@
                   <th>利息</th>
                   <th>提前还款</th>
                   <th>剩余本金</th>
+                  <th>状态</th>
                   <th>变化</th>
                 </tr>
               </thead>

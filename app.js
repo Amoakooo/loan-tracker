@@ -195,6 +195,16 @@ function effectiveMonth(event, loan) {
   return Math.max(1, baseMonth + shift);
 }
 
+function paymentDateForRow(row, loan) {
+  return `${row.date}-${String(loan.paymentDay).padStart(2, "0")}`;
+}
+
+function paidStatus(row, loan, today = new Date()) {
+  const [year, month, day] = paymentDateForRow(row, loan).split("-").map(Number);
+  const paymentDate = new Date(year, month - 1, day, 23, 59, 59);
+  return paymentDate < today ? "paid" : "pending";
+}
+
 function monthlyPayment(balance, monthlyRate, months) {
   if (months <= 0 || balance <= 0) return 0;
   if (monthlyRate === 0) return balance / months;
@@ -426,6 +436,7 @@ function renderTimeline(phases) {
 }
 
 function renderSchedule(rows) {
+  const loan = activeLoan();
   const changedMonths = new Set();
   rows.forEach((row) => {
     if (row.changed) {
@@ -444,8 +455,10 @@ function renderSchedule(rows) {
     .map((row) => {
       const previous = rows[row.month - 2];
       const paymentDelta = previous ? row.payment - previous.payment : 0;
+      const status = paidStatus(row, loan);
+      const statusText = status === "paid" ? "已还" : "待还";
       return `
-        <tr class="${row.changed ? "changed" : ""}">
+        <tr class="${row.changed ? "changed" : ""} ${status === "paid" ? "paid-row" : "pending-row"}">
           <td>第 ${row.month} 期</td>
           <td>${row.date}</td>
           <td>${percent(row.annualRate)}</td>
@@ -455,6 +468,7 @@ function renderSchedule(rows) {
           <td>${money(row.interest)}</td>
           <td>${row.prepayment > 0 ? money(row.prepayment) : "-"}</td>
           <td>${money(row.balance)}</td>
+          <td><span class="status-pill ${status}">${statusText}</span></td>
           <td>${row.note ? `<span class="tag">${row.note}</span>` : "-"}</td>
         </tr>`;
     })
@@ -601,10 +615,11 @@ function updateEventTypeUI() {
 
 function exportCsv() {
   const loan = activeLoan();
-  const headers = ["期数", "月份", "年利率", "月供", "月供变化", "本金", "利息", "提前还款", "剩余本金", "变化"];
+  const headers = ["期数", "月份", "年利率", "月供", "月供变化", "本金", "利息", "提前还款", "剩余本金", "状态", "变化"];
   const lines = latestSchedule.map((row, index) => {
     const previous = latestSchedule[index - 1];
     const paymentDelta = previous ? row.payment - previous.payment : 0;
+    const status = paidStatus(row, loan) === "paid" ? "已还" : "待还";
     return [
       row.month,
       row.date,
@@ -615,6 +630,7 @@ function exportCsv() {
       row.interest.toFixed(2),
       row.prepayment.toFixed(2),
       row.balance.toFixed(2),
+      status,
       row.note,
     ]
       .map((cell) => `"${String(cell).replaceAll('"', '""')}"`)
@@ -675,6 +691,17 @@ els.eventList.addEventListener("click", (event) => {
 fillForm();
 updateEventTypeUI();
 render({ syncForm: true });
+setupMobileCollapsibles();
+
+function setupMobileCollapsibles() {
+  document.querySelectorAll("summary button").forEach((button) => {
+    button.addEventListener("click", (event) => event.stopPropagation());
+  });
+  if (!window.matchMedia || !window.matchMedia("(max-width: 620px)").matches) return;
+  document.querySelectorAll(".sidebar .collapsible").forEach((panel, index) => {
+    panel.open = index === 0;
+  });
+}
 
 window.addEventListener("beforeinstallprompt", (event) => {
   event.preventDefault();
