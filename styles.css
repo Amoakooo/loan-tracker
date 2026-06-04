@@ -91,6 +91,9 @@ h1 {
 }
 
 .collapsible > summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   cursor: pointer;
   list-style: none;
 }
@@ -102,6 +105,7 @@ h1 {
 .collapsible > summary::after {
   content: "收起";
   margin-left: auto;
+  flex: 0 0 auto;
   color: var(--muted);
   font-size: 12px;
   font-weight: 600;
@@ -307,7 +311,7 @@ h2 {
 
 .metrics {
   display: grid;
-  grid-template-columns: repeat(4, minmax(150px, 1fr));
+  grid-template-columns: repeat(3, minmax(150px, 1fr));
   gap: 12px;
 }
 
@@ -331,6 +335,14 @@ h2 {
   line-height: 1.1;
 }
 
+.metrics small {
+  display: block;
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
 .timeline-wrap,
 .table-wrap {
   margin-top: 18px;
@@ -348,11 +360,30 @@ h2 {
   margin-bottom: 14px;
 }
 
+.timeline-wrap:not([open]) > .section-head {
+  margin-bottom: 0;
+}
+
+.timeline-wrap > .section-head {
+  margin-bottom: 14px;
+}
+
+.timeline-wrap:not([open]) > #timelineHint,
+.timeline-wrap:not([open]) > .timeline {
+  display: none;
+}
+
 .section-head h3 {
   font-size: 17px;
 }
 
+.timeline-wrap > .section-head h3 {
+  margin-right: auto;
+}
+
 #timelineHint {
+  display: block;
+  margin-bottom: 14px;
   color: var(--muted);
   font-size: 13px;
 }
@@ -472,10 +503,6 @@ td:last-child {
   text-align: left;
 }
 
-tr.changed {
-  background: #fff8eb;
-}
-
 tr.paid-row {
   background: #f2f8f4;
 }
@@ -484,20 +511,19 @@ tr.pending-row {
   background: #fffaf0;
 }
 
-tr.changed.paid-row {
-  background: #f7f4e8;
-}
-
-tr.changed.pending-row {
-  background: #fff3dc;
-}
-
 .tag {
   display: inline-block;
   border-radius: 999px;
   padding: 3px 8px;
   background: #e6f4f1;
   color: var(--accent-strong);
+}
+
+.change-mark {
+  color: var(--amber);
+  font-size: 16px;
+  font-weight: 850;
+  line-height: 1;
 }
 
 .status-pill {
@@ -553,7 +579,7 @@ tr.changed.pending-row {
   }
 
   .metrics {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
@@ -587,6 +613,10 @@ tr.changed.pending-row {
   .collapsible > summary {
     min-height: 34px;
     align-items: center;
+  }
+
+  .timeline-wrap > .section-head {
+    min-height: 34px;
   }
 
   .collapsible > summary::after {

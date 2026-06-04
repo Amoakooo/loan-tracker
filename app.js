@@ -52,9 +52,11 @@ const els = {
   summaryTitle: document.querySelector("#summaryTitle"),
   summarySub: document.querySelector("#summarySub"),
   currentPayment: document.querySelector("#currentPayment"),
+  currentPaymentBreakdown: document.querySelector("#currentPaymentBreakdown"),
   remainingPrincipal: document.querySelector("#remainingPrincipal"),
+  paidPrincipal: document.querySelector("#paidPrincipal"),
   totalInterest: document.querySelector("#totalInterest"),
-  payoffDate: document.querySelector("#payoffDate"),
+  paidInterest: document.querySelector("#paidInterest"),
   timeline: document.querySelector("#timeline"),
   timelineHint: document.querySelector("#timelineHint"),
   scheduleBody: document.querySelector("#scheduleBody"),
@@ -161,11 +163,9 @@ function percent(value) {
   return `${Number(value).toFixed(3).replace(/0+$/, "").replace(/\.$/, "")}%`;
 }
 
-function paymentDeltaCell(delta) {
-  if (Math.abs(delta) < 0.005) return `<span class="delta flat">0</span>`;
-  const sign = delta > 0 ? "+" : "-";
-  const className = delta > 0 ? "up" : "down";
-  return `<span class="delta ${className}">${sign}${money(Math.abs(delta))}</span>`;
+function paymentDeltaText(delta) {
+  if (Math.abs(delta) < 0.005) return "";
+  return `月供${delta > 0 ? "增加" : "减少"} ${money(Math.abs(delta))}`;
 }
 
 function monthLabel(startMonth, offset) {
@@ -203,6 +203,24 @@ function paidStatus(row, loan, today = new Date()) {
   const [year, month, day] = paymentDateForRow(row, loan).split("-").map(Number);
   const paymentDate = new Date(year, month - 1, day, 23, 59, 59);
   return paymentDate < today ? "paid" : "pending";
+}
+
+function currentScheduleSnapshot(rows, loan) {
+  const firstPendingIndex = rows.findIndex((row) => paidStatus(row, loan) === "pending");
+  const paidRows = firstPendingIndex === -1 ? rows : rows.slice(0, Math.max(0, firstPendingIndex));
+  const paidPrincipal = paidRows.reduce((sum, row) => sum + row.principalPaid + row.prepayment, 0);
+  const paidInterest = paidRows.reduce((sum, row) => sum + row.interest, 0);
+  if (firstPendingIndex === -1) {
+    const last = rows[rows.length - 1];
+    return { paymentRow: last, remainingBalance: last ? last.balance : 0, paidPrincipal, paidInterest };
+  }
+  const previousPaid = rows[firstPendingIndex - 1];
+  return {
+    paymentRow: rows[firstPendingIndex],
+    remainingBalance: previousPaid ? previousPaid.balance : loan.principal,
+    paidPrincipal,
+    paidInterest,
+  };
 }
 
 function monthlyPayment(balance, monthlyRate, months) {
@@ -409,16 +427,19 @@ function renderEvents() {
 
 function renderSummary(rows) {
   const loan = activeLoan();
-  const last = rows[rows.length - 1];
-  const current = rows.find((row) => row.balance > 0) || last;
+  const current = currentScheduleSnapshot(rows, loan);
   const totalInterest = rows.reduce((sum, row) => sum + row.interest, 0);
 
   els.summaryTitle.textContent = loan.loanName;
   els.summarySub.textContent = `${money(loan.principal)} · ${percent(loan.annualRate)} · ${loan.termMonths} 期 · 每月 ${loan.paymentDay} 日还款`;
-  els.currentPayment.textContent = current ? money(current.payment) : "-";
-  els.remainingPrincipal.textContent = last ? money(last.balance) : money(0);
+  els.currentPayment.textContent = current.paymentRow ? money(current.paymentRow.payment) : "-";
+  els.currentPaymentBreakdown.textContent = current.paymentRow
+    ? `本金 ${money(current.paymentRow.principalPaid)} + 利息 ${money(current.paymentRow.interest)}`
+    : "-";
+  els.remainingPrincipal.textContent = money(current.remainingBalance);
+  els.paidPrincipal.textContent = `已还本金 ${money(current.paidPrincipal)}`;
   els.totalInterest.textContent = money(totalInterest);
-  els.payoffDate.textContent = last ? `${last.date}（第 ${last.month} 期）` : "-";
+  els.paidInterest.textContent = `已还利息 ${money(current.paidInterest)}`;
 }
 
 function renderTimeline(phases) {
@@ -455,21 +476,22 @@ function renderSchedule(rows) {
     .map((row) => {
       const previous = rows[row.month - 2];
       const paymentDelta = previous ? row.payment - previous.payment : 0;
+      const deltaText = paymentDeltaText(paymentDelta);
+      const changeText = [deltaText, row.note].filter(Boolean).join("；");
       const status = paidStatus(row, loan);
       const statusText = status === "paid" ? "已还" : "待还";
+      const changeMark = row.changed ? `<span class="change-mark" title="本期有变化">*</span>` : "";
       return `
         <tr class="${row.changed ? "changed" : ""} ${status === "paid" ? "paid-row" : "pending-row"}">
-          <td>第 ${row.month} 期</td>
+          <td>第 ${row.month} 期 ${changeMark}</td>
           <td>${row.date}</td>
-          <td>${percent(row.annualRate)}</td>
           <td>${money(row.payment)}</td>
-          <td>${paymentDeltaCell(paymentDelta)}</td>
+          <td>${percent(row.annualRate)}</td>
           <td>${money(row.principalPaid)}</td>
           <td>${money(row.interest)}</td>
-          <td>${row.prepayment > 0 ? money(row.prepayment) : "-"}</td>
           <td>${money(row.balance)}</td>
           <td><span class="status-pill ${status}">${statusText}</span></td>
-          <td>${row.note ? `<span class="tag">${row.note}</span>` : "-"}</td>
+          <td>${changeText ? `<span class="tag">${changeText}</span>` : "-"}</td>
         </tr>`;
     })
     .join("");
@@ -615,23 +637,22 @@ function updateEventTypeUI() {
 
 function exportCsv() {
   const loan = activeLoan();
-  const headers = ["期数", "月份", "年利率", "月供", "月供变化", "本金", "利息", "提前还款", "剩余本金", "状态", "变化"];
+  const headers = ["期数", "月份", "月供", "年利率", "本金", "利息", "剩余本金", "状态", "变化"];
   const lines = latestSchedule.map((row, index) => {
     const previous = latestSchedule[index - 1];
     const paymentDelta = previous ? row.payment - previous.payment : 0;
+    const changeText = [paymentDeltaText(paymentDelta), row.note].filter(Boolean).join("；");
     const status = paidStatus(row, loan) === "paid" ? "已还" : "待还";
     return [
       row.month,
       row.date,
-      row.annualRate,
       row.payment.toFixed(2),
-      paymentDelta.toFixed(2),
+      row.annualRate,
       row.principalPaid.toFixed(2),
       row.interest.toFixed(2),
-      row.prepayment.toFixed(2),
       row.balance.toFixed(2),
       status,
-      row.note,
+      changeText,
     ]
       .map((cell) => `"${String(cell).replaceAll('"', '""')}"`)
       .join(",");

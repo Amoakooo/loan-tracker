@@ -138,28 +138,27 @@
           <article>
             <span>当前月供</span>
             <strong id="currentPayment">-</strong>
+            <small id="currentPaymentBreakdown">-</small>
           </article>
           <article>
             <span>剩余本金</span>
             <strong id="remainingPrincipal">-</strong>
+            <small id="paidPrincipal">-</small>
           </article>
           <article>
             <span>总利息</span>
             <strong id="totalInterest">-</strong>
-          </article>
-          <article>
-            <span>预计结清</span>
-            <strong id="payoffDate">-</strong>
+            <small id="paidInterest">-</small>
           </article>
         </section>
 
-        <section class="timeline-wrap">
-          <div class="section-head">
+        <details class="timeline-wrap collapsible" open>
+          <summary class="section-head panel-title row-title">
             <h3>变化时间线</h3>
-            <span id="timelineHint"></span>
-          </div>
+          </summary>
+          <span id="timelineHint"></span>
           <div id="timeline" class="timeline"></div>
-        </section>
+        </details>
 
         <section class="table-wrap">
           <div class="section-head">
@@ -179,12 +178,10 @@
                 <tr>
                   <th>期数</th>
                   <th>月份</th>
-                  <th>年利率</th>
                   <th>月供</th>
-                  <th>月供变化</th>
+                  <th>年利率</th>
                   <th>本金</th>
                   <th>利息</th>
-                  <th>提前还款</th>
                   <th>剩余本金</th>
                   <th>状态</th>
                   <th>变化</th>

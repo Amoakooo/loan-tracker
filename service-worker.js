@@ -1,4 +1,4 @@
-const cacheName = "loan-tracker-pwa-v2";
+const cacheName = "loan-tracker-pwa-v7";
 const filesToCache = [
   "./",
   "./index.html",
