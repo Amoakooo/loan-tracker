@@ -164,6 +164,8 @@ label {
 input,
 select {
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
   height: 40px;
   border: 1px solid var(--line);
   border-radius: 7px;
@@ -171,6 +173,13 @@ select {
   background: #fbfcfb;
   color: var(--ink);
   outline: none;
+}
+
+input[type="month"],
+input[type="date"] {
+  display: block;
+  max-width: 100%;
+  min-width: 0;
 }
 
 input:focus,
@@ -630,6 +639,18 @@ tr.pending-row {
   .grid-two,
   .metrics {
     grid-template-columns: 1fr;
+  }
+
+  input,
+  select {
+    min-width: 0;
+    inline-size: 100%;
+  }
+
+  input[type="month"],
+  input[type="date"] {
+    appearance: none;
+    -webkit-appearance: none;
   }
 
   .topbar,
